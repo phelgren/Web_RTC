@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Get User Media - Photo</title>
+</head>
+<body>
+<button id="take">Take a photo</button><br>
+<video id="v"></video>
+<canvas id="canvas" style="display:none;"></canvas>
+<img src='' id="photo" alt="photo"><br>
+Photo name: <input type="text" id="pname"><br>
+<button id="save">Save the photo</button><br>
+<button id="display">Display the photo</button><br>
+<button id="clear">Clear all storage</button><br>
+<script>
+	var imgSRC = "";
+	
+    (function(){
+        function userMedia(){
+            return navigator.getUserMedia = navigator.getUserMedia ||
+            navigator.webkitGetUserMedia ||
+            navigator.mozGetUserMedia ||
+            navigator.msGetUserMedia || null;
+
+        }
+
+
+        // Now we can use it
+        if( userMedia() ){
+            var videoPlaying = false;
+            var constraints = {
+                video: true,  // make 'em both true if you need both
+                audio:false
+            };
+            
+            var video = document.getElementById('v');
+
+            var media = navigator.getUserMedia(constraints, function(stream){
+
+                // URL Object is different in WebKit
+                var url = window.URL || window.webkitURL;
+
+                // create the url and set the source of the video element
+                video.src = url ? url.createObjectURL(stream) : stream;
+
+                // Start the video
+                video.play();
+                videoPlaying  = true;
+            }, function(error){
+                console.log("ERROR");
+                console.log(error);
+            });
+
+
+            // Listen for user click on the "take a photo" button
+            document.getElementById('take').addEventListener('click', function(){
+                if (videoPlaying){
+                    var canvas = document.getElementById('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    var data = canvas.toDataURL('image/jpeg');
+                    document.getElementById('photo').setAttribute('src', data);
+                    imgSRC = data;
+                    
+                }
+            }, false);
+
+            // Listen for user click on the "save a photo" button
+            document.getElementById('save').addEventListener('click', function(){
+
+            	var photoName = document.getElementById('pname').value;
+                if (imgSRC.length>20){
+											
+											savePhoto(photoName,imgSRC);
+                }
+            }, false);
+            
+            // Listen for user click on the "display a photo" button
+            document.getElementById('display').addEventListener('click', function(){
+            	// Get the storage
+            	var arrayOfObjs = getStorage();
+            	
+            	// Just grab the zero based array element
+            	
+            	var photo = arrayOfObjs[0];
+            	
+							document.getElementById('photo').setAttribute('src', photo.psrc);
+							
+							document.getElementById('pname').value = photo.pname;
+							
+            }, false);
+
+            // Listen for user click on the "display a photo" button
+            document.getElementById('clear').addEventListener('click', function(){
+            	// Dump the storage
+								localStorage.removeItem(storageObj);
+							
+            }, false);
+        } else {
+            console.log("KO");
+        }
+    })();
+    
+// If we are going to save and retrieve photos, stuff them as base64 strings into local storage.  They come in as
+// 90kb strings per photo.  Not bad 
+
+var storageObj = "storedPhotos";
+
+function getStorage(){
+	
+	// we'll need the object (this is easier to do with the JSON parser)
+	var storageString = localStorage.getItem(storageObj);
+	// could be empty
+	if(storageString == null || storageString.length==0 )
+		storageString ="[]";
+	else
+		if(storageString.indexOf("[")==-1) // only create and wrap the string as an array if needed
+			storageString = "["+storageString+"]";
+	
+	
+	var lsObjs = eval("("+storageString+")"); // JSON would be cleaner
+	
+	if (lsObjs == "undefined" ||  lsObjs == null ) {
+		// create the storage
+		localStorage.setItem(storageObj, []);
+		// then set the variable
+		lsObjs = [];
+	}
+	
+	return lsObjs;
+	
+}
+
+// Save the photo with name
+
+function savePhoto(pname, str){
+
+	// Get the array of objects
+	
+	var arrayOfObjs = getStorage();
+	
+	var newObj = {};
+	
+	newObj.pname = pname;
+	newObj.psrc = str;
+	
+	arrayOfObjs.push(newObj);
+	
+	localStorage.setItem(storageObj, JSON.stringify(arrayOfObjs)); //saves to the database, 'key', 'value'
+}
+
+</script>
+</body>
+</html>
